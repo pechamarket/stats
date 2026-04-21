@@ -133,22 +133,38 @@ function getVisitorStats() {
 
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   
-  // 1. 일일 데이터 가져오기
+  // 1. 일일 데이터 및 히스토리 가져오기
   var sheetTodayTotals = {};
   var sheetAllTimeTotals = {};
+  var dailyHistory = {};
   try {
     var dailySheet = ss.getSheetByName("visitors");
     if (dailySheet && dailySheet.getLastRow() > 1) {
       var dailyData = dailySheet.getDataRange().getValues();
       for (var i = 1; i < dailyData.length; i++) {
         var rowDate = dailyData[i][0];
+        // Date 객체인 경우 포맷팅 (YYYY-MM-DD)
+        if (rowDate instanceof Date) {
+          rowDate = Utilities.formatDate(rowDate, "GMT+9", "yyyy-MM-dd");
+        }
         var rowSite = dailyData[i][1];
         var rowCount = parseInt(dailyData[i][2]) || 0;
+        
         sheetAllTimeTotals[rowSite] = (sheetAllTimeTotals[rowSite] || 0) + rowCount;
         if (rowDate === today) sheetTodayTotals[rowSite] = rowCount;
+        
+        if (!dailyHistory[rowSite]) dailyHistory[rowSite] = [];
+        dailyHistory[rowSite].push({ date: rowDate, count: rowCount });
       }
     }
   } catch (e) {}
+
+  // 히스토리 날짜 역순 정렬 (최신순)
+  for (var s in dailyHistory) {
+    dailyHistory[s].sort(function(a, b) {
+      return b.date.localeCompare(a.date);
+    });
+  }
 
   // 2. 시간별 데이터 가져오기 (오늘 기준)
   var hourlyStats = {};
@@ -177,7 +193,8 @@ function getVisitorStats() {
       live: Math.min(liveCount, 999),
       today: sheetTodayTotals[site] || parseInt(cache.get("total_" + site + "_" + today) || "0"),
       total: sheetAllTimeTotals[site] || 0,
-      hourly: hourlyStats[site] || new Array(24).fill(0)
+      hourly: hourlyStats[site] || new Array(24).fill(0),
+      history: dailyHistory[site] || []
     };
   });
 

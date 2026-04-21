@@ -3,14 +3,15 @@ import './App.css'
 
 function App() {
   const [stats, setStats] = useState({
-    'pecha.life': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0) },
-    '119pecha.life': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0) },
-    'pecha.shop': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0) },
-    'pecha.cyou': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0) }
+    'pecha.life': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0), history: [] },
+    '119pecha.life': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0), history: [] },
+    'pecha.shop': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0), history: [] },
+    'pecha.cyou': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0), history: [] }
   })
 
   const [loading, setLoading] = useState(true)
   const [selectedSite, setSelectedSite] = useState(null)
+  const [modalType, setModalType] = useState('hourly') // 'hourly' or 'daily'
 
   // Simulation for live preview
   useEffect(() => {
@@ -30,7 +31,8 @@ function App() {
               live: Math.floor(Math.random() * 5) + 1,
               today: prev[site].today + added,
               total: prev[site].total + added,
-              hourly: newHourly
+              hourly: newHourly,
+              history: prev[site].history || []
             };
           });
           return newStats;
@@ -80,14 +82,18 @@ function App() {
             <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
               <div 
                 className="clickable-stat"
-                onClick={() => setSelectedSite(site)}
+                onClick={() => { setSelectedSite(site); setModalType('hourly'); }}
                 style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', cursor: 'pointer' }}
               >
                 <span className="stat-label" style={{ fontSize: '0.7rem' }}>오늘 방문자 🔍</span>
                 <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>{data.today}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span className="stat-label" style={{ fontSize: '0.7rem' }}>누적 방문자</span>
+              <div 
+                className="clickable-stat"
+                onClick={() => { setSelectedSite(site); setModalType('daily'); }}
+                style={{ display: 'flex', justifyContent: 'space-between', cursor: 'pointer' }}
+              >
+                <span className="stat-label" style={{ fontSize: '0.7rem' }}>누적 방문자 🔍</span>
                 <span style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--primary-light)' }}>{data.total}</span>
               </div>
             </div>
@@ -99,27 +105,52 @@ function App() {
         <div className="modal-overlay" onClick={() => setSelectedSite(null)}>
           <div className="modal-content glass-card" onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 className="warning-text">{selectedSite} 시간별 통계</h2>
+              <h2 className="warning-text">
+                {selectedSite} {modalType === 'hourly' ? '시간별 통계' : '일별 통계'}
+              </h2>
               <button className="close-btn" onClick={() => setSelectedSite(null)}>&times;</button>
             </div>
             
-            <div className="hourly-chart">
-              {stats[selectedSite].hourly.map((count, hour) => {
-                const maxCount = Math.max(...stats[selectedSite].hourly, 1);
-                const height = (count / maxCount) * 100;
-                return (
-                  <div key={hour} className="chart-bar-container">
-                    <div className="chart-bar" style={{ height: `${height}%` }}>
-                      <span className="bar-tooltip">{count}</span>
-                    </div>
-                    <span className="bar-label">{hour}</span>
-                  </div>
-                )
-              })}
-            </div>
-            <p style={{ textAlign: 'center', marginTop: '1rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-              오늘 0시부터 현재까지의 시간대별 방문자 수입니다.
-            </p>
+            {modalType === 'hourly' ? (
+              <>
+                <div className="hourly-chart">
+                  {stats[selectedSite].hourly.map((count, hour) => {
+                    const maxCount = Math.max(...stats[selectedSite].hourly, 1);
+                    const height = (count / maxCount) * 100;
+                    return (
+                      <div key={hour} className="chart-bar-container">
+                        <div className="chart-bar" style={{ height: `${height}%` }}>
+                          <span className="bar-tooltip">{count}</span>
+                        </div>
+                        <span className="bar-label">{hour}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+                <p style={{ textAlign: 'center', marginTop: '1.5rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                  오늘 0시부터 현재까지의 시간대별 방문자 수입니다.
+                </p>
+              </>
+            ) : (
+              <div className="daily-list">
+                <div className="daily-list-header">
+                  <span>날짜</span>
+                  <span>방문자 수</span>
+                </div>
+                <div className="daily-list-body">
+                  {stats[selectedSite].history.length > 0 ? (
+                    stats[selectedSite].history.map((item, idx) => (
+                      <div key={idx} className="daily-row">
+                        <span className="date">{item.date}</span>
+                        <span className="count">{item.count.toLocaleString()}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>기록된 데이터가 없습니다.</p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

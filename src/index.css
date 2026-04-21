@@ -209,3 +209,44 @@ header p {
 .clickable-stat:hover {
   opacity: 0.8;
 }
+
+.daily-list {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.daily-list-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: bold;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.daily-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.daily-row:last-child {
+  border-bottom: none;
+}
+
+.daily-row:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.daily-row .date {
+  color: var(--text-main);
+}
+
+.daily-row .count {
+  color: var(--warning);
+  font-weight: 600;
+}
