@@ -62,16 +62,16 @@ function App() {
   return (
     <div className="dashboard-container">
       <header>
-        <h1 className="gradient-text">Live Visitor Dashboard</h1>
-        <p>Real-time monitoring across 4 active platforms</p>
+        <h1 className="gradient-text">실시간 방문자 대시보드</h1>
+        <p>4개 플랫폼 실시간 모니터링 현황</p>
       </header>
 
-      <div className="main-stat glass-card" style={{ marginBottom: '2rem', textAlign: 'center' }}>
-        <div className="stat-label">Total Live Visitors</div>
-        <div className="stat-value gradient-text" style={{ fontSize: '4rem' }}>{totalLive}</div>
+      <div className="main-stat glass-card" style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+        <div className="stat-label">총 실시간 접속자</div>
+        <div className="stat-value gradient-text" style={{ fontSize: '3rem' }}>{totalLive}</div>
         <div style={{ color: 'var(--success)' }}>
           <span className="status-dot"></span>
-          System Online
+          시스템 정상 가동 중
         </div>
       </div>
 
@@ -81,18 +81,18 @@ function App() {
             <div className="stat-label">{site}</div>
             <div className="stat-value">{data.live}</div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-              Current active sessions
+              현재 활성 세션
             </p>
             <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-              <div className="stat-label" style={{ fontSize: '0.7rem' }}>Today's Total</div>
+              <div className="stat-label" style={{ fontSize: '0.7rem' }}>오늘 누적 방문자</div>
               <div style={{ fontSize: '1.2rem', fontWeight: '600' }}>{data.total}</div>
             </div>
           </div>
         ))}
       </div>
 
-      <footer style={{ marginTop: '4rem', textAlign: 'center', opacity: 0.5, fontSize: '0.8rem' }}>
-        &copy; 2026 PechaMaster Stats &bull; Powered by Google Apps Script
+      <footer style={{ marginTop: '2rem', textAlign: 'center', opacity: 0.5, fontSize: '0.8rem' }}>
+        &copy; 2026 통합 방문자 통계 &bull; Google Apps Script 연동
       </footer>
     </div>
   )

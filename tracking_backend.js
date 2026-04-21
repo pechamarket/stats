@@ -44,7 +44,7 @@ function recordPing(site) {
 }
 
 function getVisitorStats() {
-  var sites = ["pecha.life", "119pecha.life", "pecha.shop"];
+  var sites = ["pecha.life", "119pecha.life", "pecha.shop", "pecha.cyou"];
   var stats = {};
   var cache = CacheService.getScriptCache();
   var now = Math.floor(Date.now() / 1000);
