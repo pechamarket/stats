@@ -5,7 +5,8 @@ function App() {
   const [stats, setStats] = useState({
     'pecha.life': { live: 0, total: 0 },
     '119pecha.life': { live: 0, total: 0 },
-    'pecha.shop': { live: 0, total: 0 }
+    'pecha.shop': { live: 0, total: 0 },
+    'pecha.cyou': { live: 0, total: 0 }
   })
 
   const [loading, setLoading] = useState(true)
@@ -30,6 +31,10 @@ function App() {
           'pecha.shop': {
             live: Math.floor(Math.random() * 8) + 2,
             total: prev['pecha.shop'].total + Math.floor(Math.random() * 3)
+          },
+          'pecha.cyou': {
+            live: Math.floor(Math.random() * 6) + 1,
+            total: prev['pecha.cyou'].total + Math.floor(Math.random() * 2)
           }
         }))
         setLoading(false)
@@ -58,7 +63,7 @@ function App() {
     <div className="dashboard-container">
       <header>
         <h1 className="gradient-text">Live Visitor Dashboard</h1>
-        <p>Real-time monitoring across 3 active platforms</p>
+        <p>Real-time monitoring across 4 active platforms</p>
       </header>
 
       <div className="main-stat glass-card" style={{ marginBottom: '2rem', textAlign: 'center' }}>
