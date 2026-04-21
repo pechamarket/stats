@@ -3,10 +3,10 @@ import './App.css'
 
 function App() {
   const [stats, setStats] = useState({
-    'pecha.life': { live: 0, total: 0 },
-    '119pecha.life': { live: 0, total: 0 },
-    'pecha.shop': { live: 0, total: 0 },
-    'pecha.cyou': { live: 0, total: 0 }
+    'pecha.life': { live: 0, today: 0, total: 0 },
+    '119pecha.life': { live: 0, today: 0, total: 0 },
+    'pecha.shop': { live: 0, today: 0, total: 0 },
+    'pecha.cyou': { live: 0, today: 0, total: 0 }
   })
 
   const [loading, setLoading] = useState(true)
@@ -19,24 +19,18 @@ function App() {
     const fetchData = async () => {
       if (!GAS_URL) {
         // Fallback to simulation if no URL is provided
-        setStats(prev => ({
-          'pecha.life': {
-            live: Math.floor(Math.random() * 5) + 1,
-            total: prev['pecha.life'].total + Math.floor(Math.random() * 2)
-          },
-          '119pecha.life': {
-            live: Math.floor(Math.random() * 3) + 1,
-            total: prev['119pecha.life'].total + Math.floor(Math.random() * 2)
-          },
-          'pecha.shop': {
-            live: Math.floor(Math.random() * 8) + 2,
-            total: prev['pecha.shop'].total + Math.floor(Math.random() * 3)
-          },
-          'pecha.cyou': {
-            live: Math.floor(Math.random() * 6) + 1,
-            total: prev['pecha.cyou'].total + Math.floor(Math.random() * 2)
-          }
-        }))
+        setStats(prev => {
+          const newStats = { ...prev };
+          Object.keys(newStats).forEach(site => {
+            const added = Math.floor(Math.random() * 2);
+            newStats[site] = {
+              live: Math.floor(Math.random() * 5) + 1,
+              today: prev[site].today + added,
+              total: prev[site].total + added
+            };
+          });
+          return newStats;
+        })
         setLoading(false)
         return
       }
@@ -57,7 +51,7 @@ function App() {
     return () => clearInterval(interval)
   }, [])
 
-  const totalLive = Object.values(stats).reduce((acc, curr) => acc + curr.live, 0)
+  const totalLive = Object.values(stats).reduce((acc, curr) => acc + (curr.live || 0), 0)
 
   return (
     <div className="dashboard-container">
@@ -84,8 +78,14 @@ function App() {
               현재 활성 세션
             </p>
             <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-              <div className="stat-label" style={{ fontSize: '0.7rem' }}>오늘 누적 방문자</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: '600' }}>{data.total}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span className="stat-label" style={{ fontSize: '0.7rem' }}>오늘 방문자</span>
+                <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>{data.today}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span className="stat-label" style={{ fontSize: '0.7rem' }}>누적 방문자</span>
+                <span style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--primary-light)' }}>{data.total}</span>
+              </div>
             </div>
           </div>
         ))}
