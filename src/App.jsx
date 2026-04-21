@@ -11,7 +11,8 @@ function App() {
 
   const [loading, setLoading] = useState(true)
   const [selectedSite, setSelectedSite] = useState(null)
-  const [modalType, setModalType] = useState('hourly') // 'hourly' or 'daily'
+  const [modalType, setModalType] = useState('hourly') 
+  const [calDate, setCalDate] = useState(new Date()) // 달력 기준 날짜
 
   // Simulation for live preview
   useEffect(() => {
@@ -58,6 +59,48 @@ function App() {
 
   const totalLive = Object.values(stats).reduce((acc, curr) => acc + (curr.live || 0), 0)
 
+  // 달력 렌더링 함수
+  const renderCalendar = (history) => {
+    const year = calDate.getFullYear();
+    const month = calDate.getMonth();
+    
+    const firstDay = new Date(year, month, 1).getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    
+    const days = [];
+    // 공백 추가
+    for (let i = 0; i < firstDay; i++) days.push(null);
+    // 날짜 추가
+    for (let i = 1; i <= lastDate; i++) days.push(i);
+
+    return (
+      <div className="calendar-container">
+        <div className="calendar-header">
+          <button onClick={() => setCalDate(new Date(year, month - 1, 1))}>&lt;</button>
+          <span>{year}년 {month + 1}월</span>
+          <button onClick={() => setCalDate(new Date(year, month + 1, 1))}>&gt;</button>
+        </div>
+        <div className="calendar-grid">
+          {['일', '월', '화', '수', '목', '금', '토'].map(d => <div key={d} className="calendar-day-label">{d}</div>)}
+          {days.map((day, idx) => {
+            if (!day) return <div key={idx} className="calendar-day empty"></div>;
+            
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const historyItem = history.find(h => h.date === dateStr);
+            const count = historyItem ? historyItem.count : 0;
+
+            return (
+              <div key={idx} className={`calendar-day ${count > 0 ? 'has-data' : ''}`}>
+                <span className="day-num">{day}</span>
+                {count > 0 && <span className="day-count">{count.toLocaleString()}</span>}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="dashboard-container">
       <header>
@@ -90,7 +133,7 @@ function App() {
               </div>
               <div 
                 className="clickable-stat"
-                onClick={() => { setSelectedSite(site); setModalType('daily'); }}
+                onClick={() => { setSelectedSite(site); setModalType('daily'); setCalDate(new Date()); }}
                 style={{ display: 'flex', justifyContent: 'space-between', cursor: 'pointer' }}
               >
                 <span className="stat-label" style={{ fontSize: '0.7rem' }}>누적 방문자 🔍</span>
@@ -101,21 +144,24 @@ function App() {
         ))}
       </div>
 
-      {selectedSite && (
-        <div className="modal-overlay" onClick={() => setSelectedSite(null)}>
-          <div className="modal-content glass-card" onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 className="warning-text">
-                {selectedSite} {modalType === 'hourly' ? '시간별 통계' : '일별 통계'}
-              </h2>
-              <button className="close-btn" onClick={() => setSelectedSite(null)}>&times;</button>
-            </div>
+      {selectedSite && (() => {
+        const data = stats[selectedSite];
+        return (
+          <div className="modal-overlay" onClick={() => setSelectedSite(null)}>
+            <div className="modal-content glass-card" onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h2 className="warning-text">
+                  {selectedSite} {modalType === 'hourly' ? '시간별 통계' : '일별 통계'}
+                </h2>
+                <button className="close-btn" onClick={() => setSelectedSite(null)}>&times;</button>
+              </div>
             
             {modalType === 'hourly' ? (
               <>
                 <div className="hourly-chart">
-                  {stats[selectedSite].hourly.map((count, hour) => {
-                    const maxCount = Math.max(...stats[selectedSite].hourly, 1);
+                  {(data.hourly || new Array(24).fill(0)).map((count, hour) => {
+                    const hourlyData = data.hourly || new Array(24).fill(0);
+                    const maxCount = Math.max(...hourlyData, 1);
                     const height = (count / maxCount) * 100;
                     return (
                       <div key={hour} className="chart-bar-container">
@@ -132,28 +178,12 @@ function App() {
                 </p>
               </>
             ) : (
-              <div className="daily-list">
-                <div className="daily-list-header">
-                  <span>날짜</span>
-                  <span>방문자 수</span>
-                </div>
-                <div className="daily-list-body">
-                  {stats[selectedSite].history.length > 0 ? (
-                    stats[selectedSite].history.map((item, idx) => (
-                      <div key={idx} className="daily-row">
-                        <span className="date">{item.date}</span>
-                        <span className="count">{item.count.toLocaleString()}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>기록된 데이터가 없습니다.</p>
-                  )}
-                </div>
-              </div>
+              renderCalendar(data.history || [])
             )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <footer style={{ marginTop: '2rem', textAlign: 'center', opacity: 0.5, fontSize: '0.8rem' }}>
         &copy; 2026 통합 방문자 통계 &bull; Google Apps Script 연동

@@ -250,3 +250,102 @@ header p {
   color: var(--warning);
   font-weight: 600;
 }
+
+/* Calendar Styles */
+.calendar-container {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 1rem;
+  padding: 1.5rem;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.calendar-header button {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: var(--text-main);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background 0.2s;
+}
+
+.calendar-header button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.calendar-header span {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.calendar-day-label {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  padding-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.calendar-day {
+  aspect-ratio: 1/1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  position: relative;
+  transition: transform 0.2s;
+}
+
+.calendar-day.empty {
+  background: transparent;
+}
+
+.calendar-day.has-data {
+  background: rgba(79, 172, 254, 0.15);
+  border: 1px solid rgba(79, 172, 254, 0.3);
+}
+
+.calendar-day.has-data:hover {
+  transform: scale(1.05);
+  background: rgba(79, 172, 254, 0.25);
+}
+
+.day-num {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.has-data .day-num {
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.day-count {
+  font-size: 0.7rem;
+  color: var(--warning);
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1px 4px;
+  border-radius: 4px;
+}

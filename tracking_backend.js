@@ -72,7 +72,10 @@ function recordVisit(site) {
 // ─── 구글 시트 저장 ─────────────────────────────────────────────
 function saveToSheet(site, today, hour) {
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  
+  var now = new Date();
+  var kstFull = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  var timestamp = Utilities.formatDate(kstFull, "GMT+9", "yyyy-MM-dd HH:mm:ss");
+
   // A. 일일 합계 업데이트 (visitors 시트)
   var dailySheet = getOrCreateSheet(ss, "visitors");
   if (dailySheet.getLastRow() === 0) {
@@ -119,9 +122,18 @@ function saveToSheet(site, today, hour) {
     for (var k = 0; k < 24; k++) newRow.push(k === hour ? 1 : 0);
     hourlySheet.appendRow(newRow);
   } else {
-    var hourCell = hourlySheet.getRange(hourlyRowIndex, hour + 3); // date, site 가 1, 2열이므로 hour 0은 3열
+    var hourCell = hourlySheet.getRange(hourlyRowIndex, hour + 3);
     hourCell.setValue((hourCell.getValue() || 0) + 1);
   }
+
+  // C. 상세 로그 기록 (raw_logs 시트) - 분/초 단위 분석용
+  var logsSheet = getOrCreateSheet(ss, "raw_logs");
+  if (logsSheet.getLastRow() === 0) {
+    logsSheet.appendRow(["timestamp", "date", "site"]);
+    logsSheet.getRange(1, 1, 1, 3).setFontWeight("bold");
+    logsSheet.setFrozenRows(1); // 헤더 고정
+  }
+  logsSheet.appendRow([timestamp, today, site]);
 }
 
 // ─── 통계 조회 ──────────────────────────────────────────────────
