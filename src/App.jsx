@@ -3,30 +3,34 @@ import './App.css'
 
 function App() {
   const [stats, setStats] = useState({
-    'pecha.life': { live: 0, today: 0, total: 0 },
-    '119pecha.life': { live: 0, today: 0, total: 0 },
-    'pecha.shop': { live: 0, today: 0, total: 0 },
-    'pecha.cyou': { live: 0, today: 0, total: 0 }
+    'pecha.life': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0) },
+    '119pecha.life': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0) },
+    'pecha.shop': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0) },
+    'pecha.cyou': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0) }
   })
 
   const [loading, setLoading] = useState(true)
+  const [selectedSite, setSelectedSite] = useState(null)
 
-  // Simulation for live preview (Replace with real GAS URL later)
+  // Simulation for live preview
   useEffect(() => {
-    // Instructions: Set your GAS Web App URL here
     const GAS_URL = "https://script.google.com/macros/s/AKfycbxKeICtnye1vJVbNuJjx7wCwH3pIxnt2ELJaIXzS0SCxF44kMNdyIx4qNjvj5CWhKlv/exec";
 
     const fetchData = async () => {
       if (!GAS_URL) {
-        // Fallback to simulation if no URL is provided
         setStats(prev => {
           const newStats = { ...prev };
           Object.keys(newStats).forEach(site => {
             const added = Math.floor(Math.random() * 2);
+            const currentHour = new Date().getUTCHours();
+            const newHourly = [...(prev[site].hourly || new Array(24).fill(0))];
+            newHourly[currentHour] += added;
+
             newStats[site] = {
               live: Math.floor(Math.random() * 5) + 1,
               today: prev[site].today + added,
-              total: prev[site].total + added
+              total: prev[site].total + added,
+              hourly: newHourly
             };
           });
           return newStats;
@@ -47,7 +51,6 @@ function App() {
 
     fetchData()
     const interval = setInterval(fetchData, 5000)
-
     return () => clearInterval(interval)
   }, [])
 
@@ -57,7 +60,6 @@ function App() {
     <div className="dashboard-container">
       <header>
         <h1 className="gradient-text">실시간 방문자 대시보드</h1>
-        <p>4개 플랫폼 실시간 모니터링 현황</p>
       </header>
 
       <div className="main-stat glass-card" style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
@@ -72,14 +74,16 @@ function App() {
       <div className="grid-layout">
         {Object.entries(stats).map(([site, data]) => (
           <div key={site} className="glass-card">
-            <div className="stat-label">{site}</div>
+            <div className="warning-text" style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>{site}</div>
             <div className="stat-value">{data.live}</div>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-              현재 활성 세션
-            </p>
+            
             <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <span className="stat-label" style={{ fontSize: '0.7rem' }}>오늘 방문자</span>
+              <div 
+                className="clickable-stat"
+                onClick={() => setSelectedSite(site)}
+                style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', cursor: 'pointer' }}
+              >
+                <span className="stat-label" style={{ fontSize: '0.7rem' }}>오늘 방문자 🔍</span>
                 <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>{data.today}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -90,6 +94,35 @@ function App() {
           </div>
         ))}
       </div>
+
+      {selectedSite && (
+        <div className="modal-overlay" onClick={() => setSelectedSite(null)}>
+          <div className="modal-content glass-card" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 className="warning-text">{selectedSite} 시간별 통계</h2>
+              <button className="close-btn" onClick={() => setSelectedSite(null)}>&times;</button>
+            </div>
+            
+            <div className="hourly-chart">
+              {stats[selectedSite].hourly.map((count, hour) => {
+                const maxCount = Math.max(...stats[selectedSite].hourly, 1);
+                const height = (count / maxCount) * 100;
+                return (
+                  <div key={hour} className="chart-bar-container">
+                    <div className="chart-bar" style={{ height: `${height}%` }}>
+                      <span className="bar-tooltip">{count}</span>
+                    </div>
+                    <span className="bar-label">{hour}</span>
+                  </div>
+                )
+              })}
+            </div>
+            <p style={{ textAlign: 'center', marginTop: '1rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+              오늘 0시부터 현재까지의 시간대별 방문자 수입니다.
+            </p>
+          </div>
+        </div>
+      )}
 
       <footer style={{ marginTop: '2rem', textAlign: 'center', opacity: 0.5, fontSize: '0.8rem' }}>
         &copy; 2026 통합 방문자 통계 &bull; Google Apps Script 연동

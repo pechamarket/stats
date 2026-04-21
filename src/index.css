@@ -7,6 +7,7 @@
   --text-secondary: #94a3b8;
   --success: #22c55e;
   --accent: #f43f5e;
+  --warning: #fbbf24;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -60,6 +61,11 @@ body {
   font-weight: 800;
 }
 
+.warning-text {
+  color: var(--warning);
+  font-weight: 700;
+}
+
 .stat-value {
   font-size: 2rem;
   font-weight: 700;
@@ -109,4 +115,97 @@ header h1 {
 
 header p {
   color: var(--text-secondary);
+}
+
+/* Modal and Chart Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 2rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  color: var(--text-main);
+}
+
+.hourly-chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 200px;
+  gap: 4px;
+  padding-top: 20px;
+}
+
+.chart-bar-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+
+.chart-bar {
+  width: 100%;
+  background: linear-gradient(to top, var(--primary), var(--secondary));
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  transition: height 0.3s ease;
+}
+
+.chart-bar:hover {
+  filter: brightness(1.2);
+}
+
+.bar-tooltip {
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  color: var(--text-main);
+  font-weight: bold;
+  opacity: 0;
+  transition: opacity 0.2s;
+  background: rgba(0,0,0,0.5);
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.chart-bar:hover .bar-tooltip {
+  opacity: 1;
+}
+
+.bar-label {
+  margin-top: 8px;
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+}
+
+.clickable-stat:hover {
+  opacity: 0.8;
 }
