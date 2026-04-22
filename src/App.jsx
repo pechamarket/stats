@@ -6,7 +6,8 @@ function App() {
     'pecha.life': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0), history: [] },
     '119pecha.life': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0), history: [] },
     'pecha.shop': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0), history: [] },
-    'pecha.cyou': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0), history: [] }
+    'pecha.cyou': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0), history: [] },
+    'pechamarket.github.io': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0), history: [] }
   })
 
   const [loading, setLoading] = useState(true)
