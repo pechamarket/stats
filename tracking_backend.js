@@ -33,8 +33,8 @@ function doGet(e) {
       JSON.stringify(getVisitorStats())
     ).setMimeType(ContentService.MimeType.JSON);
   } else if (params.site) {
-    // 방문 핑 기록
-    recordVisit(params.site);
+    // 방문 핑 기록 (new=1 이면 새 방문으로 간주)
+    recordVisit(params.site, params.new === "1");
     output = ContentService.createTextOutput("ok");
   } else {
     output = ContentService.createTextOutput("invalid request");
@@ -44,28 +44,32 @@ function doGet(e) {
 }
 
 // ─── 방문 기록 ──────────────────────────────────────────────────
-function recordVisit(site) {
-  if (SITES.indexOf(site) === -1) return; // 허용된 사이트만 처리
+function recordVisit(site, isNew) {
+  // 사이트명 정규화 (www. 제거 및 소문자화)
+  var normalizedSite = site.toLowerCase().replace(/^www\./, "");
+  if (SITES.indexOf(normalizedSite) === -1) return; 
 
   var cache = CacheService.getScriptCache();
   var timestamp = Math.floor(Date.now() / 1000);
   var today = getTodayKST();
   var hour = getHourKST();
 
-  // 1. 실시간 핑 캐싱 (30초 유지)
-  cache.put("ping_" + site + "_" + timestamp, "1", 30);
+  // 1. 실시간 핑 캐싱 (현재 접속자용 - 모든 핑에 대해 수행)
+  cache.put("ping_" + normalizedSite + "_" + timestamp, "1", 35);
 
-  // 2. 오늘 누적 카운트 캐시 업데이트
-  var cacheKey = "total_" + site + "_" + today;
-  var currentCached = parseInt(cache.get(cacheKey) || "0");
-  cache.put(cacheKey, (currentCached + 1).toString(), 86400);
+  // 2. 누적 카운트 (새 방문일 때만 또는 캐시가 없을 때만 업데이트 권장하지만, 
+  // 기존 로직 호환성을 위해 snippet에서 new=1을 보낼 때만 시트 업데이트하도록 유도 가능)
+  // 여기서는 isNew가 true일 때만 시트에 저장하도록 변경하여 '중복 카운팅' 방지
+  if (isNew) {
+    var cacheKey = "total_" + normalizedSite + "_" + today;
+    var currentCached = parseInt(cache.get(cacheKey) || "0");
+    cache.put(cacheKey, (currentCached + 1).toString(), 86400);
 
-  // 3. 구글 시트에 영구 저장 (비동기처럼 빠르게 처리)
-  try {
-    saveToSheet(site, today, hour);
-  } catch (err) {
-    // 시트 저장 실패해도 핑은 계속 동작
-    Logger.log("Sheet save error: " + err.toString());
+    try {
+      saveToSheet(normalizedSite, today, hour);
+    } catch (err) {
+      Logger.log("Sheet save error: " + err.toString());
+    }
   }
 }
 
@@ -86,7 +90,11 @@ function saveToSheet(site, today, hour) {
   var dailyData = dailySheet.getDataRange().getValues();
   var dailyRowIndex = -1;
   for (var i = 1; i < dailyData.length; i++) {
-    if (dailyData[i][0] === today && dailyData[i][1] === site) {
+    var rowDate = dailyData[i][0];
+    if (rowDate instanceof Date) {
+      rowDate = Utilities.formatDate(rowDate, "GMT+9", "yyyy-MM-dd");
+    }
+    if (rowDate === today && dailyData[i][1] === site) {
       dailyRowIndex = i + 1;
       break;
     }
@@ -96,7 +104,8 @@ function saveToSheet(site, today, hour) {
     dailySheet.appendRow([today, site, 1]);
   } else {
     var cell = dailySheet.getRange(dailyRowIndex, 3);
-    cell.setValue((cell.getValue() || 0) + 1);
+    var currentVal = parseInt(cell.getValue()) || 0;
+    cell.setValue(currentVal + 1);
   }
 
   // B. 시간별 통계 업데이트 (hourly 시트)
@@ -111,7 +120,11 @@ function saveToSheet(site, today, hour) {
   var hourlyData = hourlySheet.getDataRange().getValues();
   var hourlyRowIndex = -1;
   for (var j = 1; j < hourlyData.length; j++) {
-    if (hourlyData[j][0] === today && hourlyData[j][1] === site) {
+    var hRowDate = hourlyData[j][0];
+    if (hRowDate instanceof Date) {
+      hRowDate = Utilities.formatDate(hRowDate, "GMT+9", "yyyy-MM-dd");
+    }
+    if (hRowDate === today && hourlyData[j][1] === site) {
       hourlyRowIndex = j + 1;
       break;
     }
@@ -123,7 +136,8 @@ function saveToSheet(site, today, hour) {
     hourlySheet.appendRow(newRow);
   } else {
     var hourCell = hourlySheet.getRange(hourlyRowIndex, hour + 3);
-    hourCell.setValue((hourCell.getValue() || 0) + 1);
+    var currentHVal = parseInt(hourCell.getValue()) || 0;
+    hourCell.setValue(currentHVal + 1);
   }
 
   // C. 상세 로그 기록 (raw_logs 시트) - 분/초 단위 분석용
@@ -163,17 +177,24 @@ function getVisitorStats() {
         var rowCount = parseInt(dailyData[i][2]) || 0;
         
         sheetAllTimeTotals[rowSite] = (sheetAllTimeTotals[rowSite] || 0) + rowCount;
-        if (rowDate === today) sheetTodayTotals[rowSite] = rowCount;
+        if (rowDate === today) {
+          sheetTodayTotals[rowSite] = (sheetTodayTotals[rowSite] || 0) + rowCount;
+        }
         
-        if (!dailyHistory[rowSite]) dailyHistory[rowSite] = [];
-        dailyHistory[rowSite].push({ date: rowDate, count: rowCount });
+        if (!dailyHistory[rowSite]) dailyHistory[rowSite] = {};
+        dailyHistory[rowSite][rowDate] = (dailyHistory[rowSite][rowDate] || 0) + rowCount;
       }
     }
   } catch (e) {}
 
-  // 히스토리 날짜 역순 정렬 (최신순)
+  // 히스토리 데이터를 배열로 변환 및 정렬
+  var formattedHistory = {};
   for (var s in dailyHistory) {
-    dailyHistory[s].sort(function(a, b) {
+    formattedHistory[s] = [];
+    for (var d in dailyHistory[s]) {
+      formattedHistory[s].push({ date: d, count: dailyHistory[s][d] });
+    }
+    formattedHistory[s].sort(function(a, b) {
       return b.date.localeCompare(a.date);
     });
   }
@@ -206,7 +227,7 @@ function getVisitorStats() {
       today: sheetTodayTotals[site] || parseInt(cache.get("total_" + site + "_" + today) || "0"),
       total: sheetAllTimeTotals[site] || 0,
       hourly: hourlyStats[site] || new Array(24).fill(0),
-      history: dailyHistory[site] || []
+      history: formattedHistory[site] || []
     };
   });
 
@@ -216,15 +237,11 @@ function getVisitorStats() {
 // ─── 유틸리티 ───────────────────────────────────────────────────
 
 function getTodayKST() {
-  var now = new Date();
-  var kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  return kst.toISOString().split("T")[0];
+  return Utilities.formatDate(new Date(), "GMT+9", "yyyy-MM-dd");
 }
 
 function getHourKST() {
-  var now = new Date();
-  var kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  return kst.getUTCHours();
+  return parseInt(Utilities.formatDate(new Date(), "GMT+9", "HH"));
 }
 
 function getOrCreateSheet(ss, name) {
