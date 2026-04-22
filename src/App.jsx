@@ -7,7 +7,7 @@ function App() {
     '119pecha.life': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0), history: [] },
     'pecha.shop': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0), history: [] },
     'pecha.cyou': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0), history: [] },
-    'pecha.bond': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0), history: [] },
+    'pechabond': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0), history: [] },
     'pechamarket.github.io': { live: 0, today: 0, total: 0, hourly: new Array(24).fill(0), history: [] }
   })
 

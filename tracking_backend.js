@@ -19,7 +19,7 @@
 var SPREADSHEET_ID = "11fi33j0r0-XaO1iYmQ8BAcjfVx5am3-G3gvp2n_1Mrs";
 
 // 추적할 사이트 목록
-var SITES = ["pecha.life", "119pecha.life", "pecha.shop", "pecha.cyou", "pecha.bond", "pechamarket.github.io"];
+var SITES = ["pecha.life", "119pecha.life", "pecha.shop", "pecha.cyou", "pechabond", "pechamarket.github.io"];
 
 // ─── 메인 핸들러 ───────────────────────────────────────────────
 function doGet(e) {
