@@ -43,10 +43,14 @@ function doGet(e) {
   return output;
 }
 
+function normalizeSiteName(site) {
+  if (!site) return "";
+  return site.toString().toLowerCase().trim().replace(/^www\./, "");
+}
+
 // ─── 방문 기록 ──────────────────────────────────────────────────
 function recordVisit(site, isNew) {
-  // 사이트명 정규화 (www. 제거 및 소문자화)
-  var normalizedSite = site.toLowerCase().replace(/^www\./, "");
+  var normalizedSite = normalizeSiteName(site);
   if (SITES.indexOf(normalizedSite) === -1) return; 
 
   var cache = CacheService.getScriptCache();
@@ -93,8 +97,11 @@ function saveToSheet(site, today, hour) {
     var rowDate = dailyData[i][0];
     if (rowDate instanceof Date) {
       rowDate = Utilities.formatDate(rowDate, "GMT+9", "yyyy-MM-dd");
+    } else {
+      rowDate = rowDate.toString().trim();
     }
-    if (rowDate === today && dailyData[i][1] === site) {
+    
+    if (rowDate === today && normalizeSiteName(dailyData[i][1]) === site) {
       dailyRowIndex = i + 1;
       break;
     }
@@ -123,8 +130,11 @@ function saveToSheet(site, today, hour) {
     var hRowDate = hourlyData[j][0];
     if (hRowDate instanceof Date) {
       hRowDate = Utilities.formatDate(hRowDate, "GMT+9", "yyyy-MM-dd");
+    } else {
+      hRowDate = hRowDate.toString().trim();
     }
-    if (hRowDate === today && hourlyData[j][1] === site) {
+    
+    if (hRowDate === today && normalizeSiteName(hourlyData[j][1]) === site) {
       hourlyRowIndex = j + 1;
       break;
     }
@@ -169,11 +179,13 @@ function getVisitorStats() {
       var dailyData = dailySheet.getDataRange().getValues();
       for (var i = 1; i < dailyData.length; i++) {
         var rowDate = dailyData[i][0];
-        // Date 객체인 경우 포맷팅 (YYYY-MM-DD)
         if (rowDate instanceof Date) {
           rowDate = Utilities.formatDate(rowDate, "GMT+9", "yyyy-MM-dd");
+        } else {
+          rowDate = rowDate.toString().trim();
         }
-        var rowSite = dailyData[i][1];
+        
+        var rowSite = normalizeSiteName(dailyData[i][1]);
         var rowCount = parseInt(dailyData[i][2]) || 0;
         
         sheetAllTimeTotals[rowSite] = (sheetAllTimeTotals[rowSite] || 0) + rowCount;
@@ -204,13 +216,26 @@ function getVisitorStats() {
   try {
     var hourlySheet = ss.getSheetByName("hourly");
     if (hourlySheet && hourlySheet.getLastRow() > 1) {
-      var hourlyData = hourlySheet.getDataRange().getValues();
-      for (var j = 1; j < hourlyData.length; j++) {
-        if (hourlyData[j][0] === today) {
-          var site = hourlyData[j][1];
+      var hData = hourlySheet.getDataRange().getValues();
+      for (var j = 1; j < hData.length; j++) {
+        var hDate = hData[j][0];
+        if (hDate instanceof Date) {
+          hDate = Utilities.formatDate(hDate, "GMT+9", "yyyy-MM-dd");
+        } else {
+          hDate = hDate.toString().trim();
+        }
+
+        if (hDate === today) {
+          var hSite = normalizeSiteName(hData[j][1]);
           var hours = [];
-          for (var h = 0; h < 24; h++) hours.push(hourlyData[j][h + 2] || 0);
-          hourlyStats[site] = hours;
+          for (var h = 0; h < 24; h++) hours.push(hData[j][h + 2] || 0);
+          
+          if (!hourlyStats[hSite]) {
+            hourlyStats[hSite] = hours;
+          } else {
+            // 이미 있으면 (중복 행일 경우) 합산
+            for (var k = 0; k < 24; k++) hourlyStats[hSite][k] += (hours[k] || 0);
+          }
         }
       }
     }
