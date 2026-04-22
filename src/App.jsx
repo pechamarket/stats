@@ -43,7 +43,7 @@ function App() {
       }
 
       try {
-        const response = await fetch(`${GAS_URL}?action=getStats`)
+        const response = await fetch(`${GAS_URL}?action=getStats&t=${Date.now()}`)
         const data = await response.json()
         setStats(data)
         setLoading(false)

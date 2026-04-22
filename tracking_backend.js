@@ -48,6 +48,19 @@ function normalizeSiteName(site) {
   return site.toString().toLowerCase().trim().replace(/^www\./, "");
 }
 
+function formatDateSafe(d) {
+  if (!d) return "";
+  if (d instanceof Date) {
+    return Utilities.formatDate(d, "GMT+9", "yyyy-MM-dd");
+  }
+  var s = d.toString().trim();
+  // "2026-04-22 00:00:00" -> "2026-04-22"
+  if (s.length >= 10 && s.match(/^\d{4}-\d{2}-\d{2}/)) {
+    return s.substring(0, 10);
+  }
+  return s;
+}
+
 // ─── 방문 기록 ──────────────────────────────────────────────────
 function recordVisit(site, isNew) {
   var normalizedSite = normalizeSiteName(site);
@@ -79,85 +92,83 @@ function recordVisit(site, isNew) {
 
 // ─── 구글 시트 저장 ─────────────────────────────────────────────
 function saveToSheet(site, today, hour) {
-  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  var now = new Date();
-  var kstFull = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  var timestamp = Utilities.formatDate(kstFull, "GMT+9", "yyyy-MM-dd HH:mm:ss");
-
-  // A. 일일 합계 업데이트 (visitors 시트)
-  var dailySheet = getOrCreateSheet(ss, "visitors");
-  if (dailySheet.getLastRow() === 0) {
-    dailySheet.appendRow(["date", "site", "total"]);
-    dailySheet.getRange(1, 1, 1, 3).setFontWeight("bold");
-  }
-
-  var dailyData = dailySheet.getDataRange().getValues();
-  var dailyRowIndex = -1;
-  for (var i = 1; i < dailyData.length; i++) {
-    var rowDate = dailyData[i][0];
-    if (rowDate instanceof Date) {
-      rowDate = Utilities.formatDate(rowDate, "GMT+9", "yyyy-MM-dd");
-    } else {
-      rowDate = rowDate.toString().trim();
-    }
+  var lock = LockService.getScriptLock();
+  try {
+    // 최대 30초 동안 락 대기
+    lock.waitLock(30000);
     
-    if (rowDate === today && normalizeSiteName(dailyData[i][1]) === site) {
-      dailyRowIndex = i + 1;
-      break;
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var now = new Date();
+    var kstFull = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    var timestamp = Utilities.formatDate(kstFull, "GMT+9", "yyyy-MM-dd HH:mm:ss");
+
+    // A. 일일 합계 업데이트 (visitors 시트)
+    var dailySheet = getOrCreateSheet(ss, "visitors");
+    if (dailySheet.getLastRow() === 0) {
+      dailySheet.appendRow(["date", "site", "total"]);
+      dailySheet.getRange(1, 1, 1, 3).setFontWeight("bold");
     }
-  }
 
-  if (dailyRowIndex === -1) {
-    dailySheet.appendRow([today, site, 1]);
-  } else {
-    var cell = dailySheet.getRange(dailyRowIndex, 3);
-    var currentVal = parseInt(cell.getValue()) || 0;
-    cell.setValue(currentVal + 1);
-  }
+    var dailyData = dailySheet.getDataRange().getValues();
+    var dailyRowIndex = -1;
+    for (var i = 1; i < dailyData.length; i++) {
+      if (formatDateSafe(dailyData[i][0]) === today && normalizeSiteName(dailyData[i][1]) === site) {
+        dailyRowIndex = i + 1;
+        break;
+      }
+    }
 
-  // B. 시간별 통계 업데이트 (hourly 시트)
-  var hourlySheet = getOrCreateSheet(ss, "hourly");
-  if (hourlySheet.getLastRow() === 0) {
-    var header = ["date", "site"];
-    for (var h = 0; h < 24; h++) header.push(h + "시");
-    hourlySheet.appendRow(header);
-    hourlySheet.getRange(1, 1, 1, 26).setFontWeight("bold");
-  }
-
-  var hourlyData = hourlySheet.getDataRange().getValues();
-  var hourlyRowIndex = -1;
-  for (var j = 1; j < hourlyData.length; j++) {
-    var hRowDate = hourlyData[j][0];
-    if (hRowDate instanceof Date) {
-      hRowDate = Utilities.formatDate(hRowDate, "GMT+9", "yyyy-MM-dd");
+    if (dailyRowIndex === -1) {
+      // 날짜를 문자열로 강제 저장 (' 접두어 사용)
+      dailySheet.appendRow(["'" + today, site, 1]);
     } else {
-      hRowDate = hRowDate.toString().trim();
+      var cell = dailySheet.getRange(dailyRowIndex, 3);
+      var currentVal = parseInt(cell.getValue()) || 0;
+      cell.setValue(currentVal + 1);
     }
-    
-    if (hRowDate === today && normalizeSiteName(hourlyData[j][1]) === site) {
-      hourlyRowIndex = j + 1;
-      break;
+
+    // B. 시간별 통계 업데이트 (hourly 시트)
+    var hourlySheet = getOrCreateSheet(ss, "hourly");
+    if (hourlySheet.getLastRow() === 0) {
+      var header = ["date", "site"];
+      for (var h = 0; h < 24; h++) header.push(h + "시");
+      hourlySheet.appendRow(header);
+      hourlySheet.getRange(1, 1, 1, 26).setFontWeight("bold");
     }
-  }
 
-  if (hourlyRowIndex === -1) {
-    var newRow = [today, site];
-    for (var k = 0; k < 24; k++) newRow.push(k === hour ? 1 : 0);
-    hourlySheet.appendRow(newRow);
-  } else {
-    var hourCell = hourlySheet.getRange(hourlyRowIndex, hour + 3);
-    var currentHVal = parseInt(hourCell.getValue()) || 0;
-    hourCell.setValue(currentHVal + 1);
-  }
+    var hourlyData = hourlySheet.getDataRange().getValues();
+    var hourlyRowIndex = -1;
+    for (var j = 1; j < hourlyData.length; j++) {
+      if (formatDateSafe(hourlyData[j][0]) === today && normalizeSiteName(hourlyData[j][1]) === site) {
+        hourlyRowIndex = j + 1;
+        break;
+      }
+    }
 
-  // C. 상세 로그 기록 (raw_logs 시트) - 분/초 단위 분석용
-  var logsSheet = getOrCreateSheet(ss, "raw_logs");
-  if (logsSheet.getLastRow() === 0) {
-    logsSheet.appendRow(["timestamp", "date", "site"]);
-    logsSheet.getRange(1, 1, 1, 3).setFontWeight("bold");
-    logsSheet.setFrozenRows(1); // 헤더 고정
+    if (hourlyRowIndex === -1) {
+      var newRow = ["'" + today, site];
+      for (var k = 0; k < 24; k++) newRow.push(k === hour ? 1 : 0);
+      hourlySheet.appendRow(newRow);
+    } else {
+      var hourCell = hourlySheet.getRange(hourlyRowIndex, hour + 3);
+      var currentHVal = parseInt(hourCell.getValue()) || 0;
+      hourCell.setValue(currentHVal + 1);
+    }
+
+    // C. 상세 로그 기록 (raw_logs 시트)
+    var logsSheet = getOrCreateSheet(ss, "raw_logs");
+    if (logsSheet.getLastRow() === 0) {
+      logsSheet.appendRow(["timestamp", "date", "site"]);
+      logsSheet.getRange(1, 1, 1, 3).setFontWeight("bold");
+      logsSheet.setFrozenRows(1);
+    }
+    logsSheet.appendRow([timestamp, "'" + today, site]);
+
+  } catch (e) {
+    Logger.log("Error in saveToSheet: " + e.toString());
+  } finally {
+    lock.releaseLock();
   }
-  logsSheet.appendRow([timestamp, today, site]);
 }
 
 // ─── 통계 조회 ──────────────────────────────────────────────────
@@ -178,13 +189,7 @@ function getVisitorStats() {
     if (dailySheet && dailySheet.getLastRow() > 1) {
       var dailyData = dailySheet.getDataRange().getValues();
       for (var i = 1; i < dailyData.length; i++) {
-        var rowDate = dailyData[i][0];
-        if (rowDate instanceof Date) {
-          rowDate = Utilities.formatDate(rowDate, "GMT+9", "yyyy-MM-dd");
-        } else {
-          rowDate = rowDate.toString().trim();
-        }
-        
+        var rowDate = formatDateSafe(dailyData[i][0]);
         var rowSite = normalizeSiteName(dailyData[i][1]);
         var rowCount = parseInt(dailyData[i][2]) || 0;
         
@@ -247,9 +252,12 @@ function getVisitorStats() {
       if (cache.get("ping_" + site + "_" + (now - i))) liveCount++;
     }
 
+    var cacheVal = parseInt(cache.get("total_" + site + "_" + today) || "0");
+    var todayFinal = Math.max(sheetTodayTotals[site] || 0, cacheVal);
+
     stats[site] = {
       live: Math.min(liveCount, 999),
-      today: sheetTodayTotals[site] || parseInt(cache.get("total_" + site + "_" + today) || "0"),
+      today: todayFinal,
       total: sheetAllTimeTotals[site] || 0,
       hourly: hourlyStats[site] || new Array(24).fill(0),
       history: formattedHistory[site] || []
